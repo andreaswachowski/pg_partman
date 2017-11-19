@@ -53,7 +53,7 @@ partition_schema := v_parent_schema;
 SELECT general_type INTO v_control_type FROM @extschema@.check_control_type(v_parent_schema, v_parent_tablename, v_control);
 
 IF ( (v_control_type = 'time') OR (v_control_type = 'id' AND v_epoch <> 'none') )
-     AND v_type <> 'time-custom' 
+     AND (v_type <> 'time-custom') AND (v_type <> 'native' OR (v_partition_interval::interval IN ('15 mins', '30mins', '1 hour', '1 day', '1 week', '1 month', '3 months', '1 year')))
 THEN
     CASE
         WHEN v_partition_interval::interval = '15 mins' THEN
@@ -82,7 +82,7 @@ ELSIF v_control_type = 'id' AND v_type <> 'time-custom' THEN
     suffix_id := (p_value::bigint - (p_value::bigint % v_partition_interval::bigint));
     partition_table := @extschema@.check_name_length(v_parent_tablename, suffix_id::text, TRUE);
 
-ELSIF v_type = 'time-custom' THEN
+ELSIF v_type = 'time-custom' OR (v_type = 'native' AND (v_partition_interval::interval NOT IN ('15 mins', '30 mins', '1 hour', '1 day', '1 week', '1 month', '3 months', '1 year'))) THEN
 
     SELECT child_table, lower(partition_range) INTO partition_table, suffix_timestamp FROM @extschema@.custom_time_partitions 
         WHERE parent_table = p_parent_table AND partition_range @> p_value::timestamptz;
